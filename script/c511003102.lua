@@ -2,15 +2,16 @@
 local s, id = GetID()
 
 function s.initial_effect(c)
-	-- Ativar apenas quando um efeito que nega um ataque é ativado
-	local e1 = Effect.CreateEffect(c)
-	e1:SetCategory(CATEGORY_NEGATE+CATEGORY_DESTROY)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
-	e1:SetCode(EVENT_CHAINING)
-	e1:SetCondition(s.condition)
-	e1:SetTarget(s.target)
-	e1:SetOperation(s.operation)
-	c:RegisterEffect(e1)
+    -- Mude o tipo para TYPE_ACTIVATE, mas o motor vai ler o .cdb para saber a velocidade
+    local e1 = Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_NEGATE+CATEGORY_DESTROY)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_CHAINING)
+    -- Adicione esta linha para garantir que ela possa responder a Counter Traps
+    e1:SetCondition(s.condition)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
 end
 
 function s.condition(e, tp, eg, ep, ev, re, r, rp)
