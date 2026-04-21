@@ -2,7 +2,7 @@
 local s, id = GetID()
 
 function s.initial_effect(c)
-    -- Invocação Especial ao baixar Magias
+    -- Invocação Especial ao baixar Magias (Apenas na Battle Phase)
     local e1 = Effect.CreateEffect(c)
     e1:SetDescription(aux.Stringid(id, 0))
     e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
@@ -10,7 +10,7 @@ function s.initial_effect(c)
     e1:SetCode(EVENT_SSET)
     e1:SetRange(LOCATION_HAND)
     e1:SetProperty(EFFECT_FLAG_DELAY)
-    e1:SetCondition(s.spcon)
+    e1:SetCondition(s.spcon) -- Aqui aplicamos a trava de fase
     e1:SetTarget(s.sptg)
     e1:SetOperation(s.spop)
     c:RegisterEffect(e1)
@@ -22,8 +22,12 @@ function s.filter(c)
 end
 
 function s.spcon(e, tp, eg, ep, ev, re, r, rp)
-    -- eg contém as cartas que foram baixadas (Set)
-    return eg:IsExists(s.filter, 1, nil)
+    -- Requisito 1: Deve ser durante a Battle Phase (Qualquer etapa dela)
+    local ph = Duel.GetCurrentPhase()
+    local is_battle = ph >= PHASE_BATTLE_START and ph <= PHASE_BATTLE
+    
+    -- Requisito 2: Deve haver pelo menos uma Magia sendo baixada (Set)
+    return is_battle and eg:IsExists(s.filter, 1, nil)
 end
 
 function s.sptg(e, tp, eg, ep, ev, re, r, rp, chk)
@@ -36,7 +40,7 @@ end
 function s.spop(e, tp, eg, ep, ev, re, r, rp)
     local c = e:GetHandler()
     if c:IsRelateToEffect(e) and Duel.SpecialSummon(c, 0, tp, tp, false, false, POS_FACEUP) ~= 0 then
-        -- Encerra a Battle Phase obrigatoriamente (como no anime)
+        -- Encerra a Battle Phase
         Duel.SkipPhase(Duel.GetTurnPlayer(), PHASE_BATTLE, RESET_PHASE + PHASE_BATTLE, 1)
     end
 end
