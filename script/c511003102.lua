@@ -14,9 +14,10 @@ function s.initial_effect(c)
 end
 
 function s.condition(e, tp, eg, ep, ev, re, r, rp)
-	if not re:IsActiveType(TYPE_MONSTER) and not re:IsHasType(EFFECT_TYPE_ACTIVATE) then return false end
-	local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
-	return tg and tg:IsExists(s.filter, 1, nil, tp) and Duel.IsChainNegatable(ev)
+    -- Requisito 1: O efeito na corrente deve ter a categoria de negar ataque
+    local ex, tg, tc = Duel.GetOperationInfo(ev, CATEGORY_NEGATE)
+    -- Requisito 2: Ou o efeito é especificamente disparado durante o ataque
+    return Duel.IsChainNegatable(ev) and (re:IsHasCategory(CATEGORY_NEGATE) or Duel.GetAttacker() ~= nil)
 end
 
 function s.filter(c, tp)
