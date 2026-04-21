@@ -1,4 +1,4 @@
--- ID da carta: 511600447
+-- ID da carta: 511003101
 local s,id=GetID()
 
 function s.initial_effect(c)
