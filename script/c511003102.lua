@@ -14,10 +14,16 @@ function s.initial_effect(c)
 end
 
 function s.condition(e, tp, eg, ep, ev, re, r, rp)
-    -- Requisito 1: O efeito na corrente deve ter a categoria de negar ataque
-    local ex, tg, tc = Duel.GetOperationInfo(ev, CATEGORY_NEGATE)
-    -- Requisito 2: Ou o efeito é especificamente disparado durante o ataque
-    return Duel.IsChainNegatable(ev) and (re:IsHasCategory(CATEGORY_NEGATE) or Duel.GetAttacker() ~= nil)
+    -- 1. Verifica se o efeito pode ser negado
+    if not Duel.IsChainNegatable(ev) then return false end
+
+    -- 2. Pega as informações de alvo da corrente atual (o Negate Attack do oponente)
+    local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
+    
+    -- 3. Verifica se existe um alvo E se esse alvo é um monstro no SEU campo
+    -- Usamos Duel.GetAttacker() para confirmar que o alvo é o monstro que está atacando
+    local attacker = Duel.GetAttacker()
+    return tg and tg:IsContains(attacker) and attacker:IsControler(tp)
 end
 
 function s.filter(c, tp)
