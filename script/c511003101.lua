@@ -22,21 +22,22 @@ end
 -- Função para manter no fundo
 function s.stay_bottom_op(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
-    -- Posição 0 é o topo, posição 1 é o fundo absoluto
-    if Duel.GetSequence(c) ~= 0 then return end -- Se não estiver no topo, não faz nada
-    
-    Duel.DisableShuffleCheck()
-    Duel.MoveSequence(c,1) 
+    -- Usamos c:GetSequence() em vez de Duel.GetSequence(c)
+    -- No deck, a sequência 0 é o fundo. Se ela não estiver na posição 0, movemos para lá.
+    if c:GetSequence() ~= 0 then 
+        Duel.MoveSequence(c,0) 
+    end
 end
 
 -- Função para substituir ao puxar
 function s.replace_op(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
+    -- Verificamos se a carta entrou na mão (LOCATION_HAND)
     if c:IsLocation(LOCATION_HAND) then
         Duel.DisableShuffleCheck()
-        -- Envia para fora do jogo (Exile) para não ocupar espaço no cemitério
-        Duel.Remove(c,POS_FACEUP,REASON_RULE)
-        -- Compra a próxima carta real do deck
+        -- Move a carta de volta para o fundo do deck em vez de remover (mais seguro para o jogo não crashar)
+        Duel.SendtoDeck(c,nil,SEQ_DEEP,REASON_RULE)
+        -- Compra uma nova carta
         Duel.Draw(tp,1,REASON_RULE)
     end
 end
