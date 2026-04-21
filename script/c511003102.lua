@@ -15,16 +15,17 @@ function s.initial_effect(c)
 end
 
 function s.condition(e, tp, eg, ep, ev, re, r, rp)
-    -- 1. Verifica se o efeito pode ser negado
     if not Duel.IsChainNegatable(ev) then return false end
-
-    -- 2. Pega as informações de alvo da corrente atual (o Negate Attack do oponente)
-    local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
     
-    -- 3. Verifica se existe um alvo E se esse alvo é um monstro no SEU campo
-    -- Usamos Duel.GetAttacker() para confirmar que o alvo é o monstro que está atacando
+    local tg = Duel.GetChainInfo(ev, CHAININFO_TARGET_CARDS)
     local attacker = Duel.GetAttacker()
-    return tg and tg:IsContains(attacker) and attacker:IsControler(tp)
+    
+    -- Verificação de segurança: só prossegue se houver um alvo E um atacante
+    if tg and attacker then
+        return tg:IsContains(attacker) and attacker:IsControler(tp)
+    end
+    
+    return false
 end
 
 function s.filter(c, tp)
