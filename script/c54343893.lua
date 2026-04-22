@@ -2,16 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Regra de Sistema: Substitui a primeira compra natural pelo Vice Dragon
+	-- Efeito de Sistema: Forçar posicionamento no Topo via Índice
 	local e0=Effect.CreateEffect(c)
-	e0:SetType(EFFECT_TYPE_FIELD)
-	e0:SetCode(EFFECT_DRAW_COUNT)
-	e0:SetProperty(EFFECT_FLAG_PLAYER_TARGET+EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
+	e0:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
+	e0:SetCode(EVENT_PREDRAW)
+	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
 	e0:SetRange(LOCATION_DECK)
-	e0:SetTargetRange(1,0)
-	e0:SetCondition(s.start_hand_con)
-	e0:SetOperation(s.start_hand_op)
-	e0:SetValue(0) -- Anula a compra padrão para injetar a manual
+	e0:SetCondition(s.top_deck_con)
+	e0:SetOperation(s.top_deck_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -25,23 +23,25 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Apenas no setup inicial (Turno 0)
-function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
+-- 1. Condição: Verifica se o duelo está a iniciar
+function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Força o Vice Dragon a ser a carta entregue pelo sistema
-function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Coloca no topo absoluto usando o índice de contagem total
+function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	if c:IsLocation(LOCATION_DECK) then
+	local tp=c:GetControler()
+	-- Obtém o número exato de cartas no deck para definir o índice do topo
+	local g=Duel.GetFieldGroup(tp,LOCATION_DECK,0)
+	if #g>0 then
 		Duel.DisableShuffleCheck()
-		-- Move para a mão sem disparar o evento visual de "Draw"
-		Duel.SendtoHand(c,nil,REASON_RULE)
-		-- Como anulamos 1 compra no Value(0), o jogo puxará as outras 4 normalmente
+		-- No OCGCore, a posição #g-1 é a primeira carta a ser puxada
+		Duel.MoveSequence(c,#g-1)
 	end
 end
 
--- Funções originais mantidas
+-- Funções originais do Vice Dragon (c54343893.lua)
 function s.spcon(e,c)
 	if c==nil then return true end
 	return Duel.GetFieldGroupCount(c:GetControler(),LOCATION_MZONE,0,nil)==0
