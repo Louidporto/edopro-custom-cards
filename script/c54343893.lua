@@ -2,14 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Fixação de Topo Primitiva (Invisível e sem erro de parâmetro)
+	-- Regra de Mão Inicial: Injeção Direta (Invisível)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_ADJUST)
+	e0:SetCode(100) -- 100 é o valor numérico para EVENT_ADJUST
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.top_deck_con)
-	e0:SetOperation(s.top_deck_op)
+	e0:SetCondition(s.start_hand_con)
+	e0:SetOperation(s.start_hand_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,24 +23,37 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Apenas no Turno 0 e se a carta ainda estiver no deck
-function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
+-- 1. Condição: Apenas no carregamento do duelo (Turno 0)
+function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0 and e:GetHandler():IsLocation(LOCATION_DECK)
 end
 
--- 2. Operação: Move para o topo absoluto usando o índice de memória (Invisível)
-function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Força a mão inicial a conter a carta
+function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	-- Obtemos o número de cartas para saber onde é o topo (índice total - 1)
-	local g=Duel.GetFieldGroup(tp,LOCATION_DECK,0)
-	local count=#g
-	if count>0 then
-		-- Desativa logs e animações visuais
+	
+	-- Verifica se você ainda não tem as 5 cartas (Momento da entrega)
+	if Duel.GetFieldGroupCount(tp,LOCATION_HAND,0) < 5 then
 		Duel.DisableShuffleCheck()
-		-- Move a sequência para a última posição do array (Topo)
-		-- Usamos o número direto para evitar o erro de 'nil' que vimos antes
-		Duel.MoveSequence(c,count-1)
+		-- 1. Puxa o Vice Dragon (Invisível via REASON_RULE)
+		Duel.SendtoHand(c,nil,1) -- 1 é REASON_RULE
+		
+		-- 2. AJUSTE: Remove a capacidade de comprar a 6ª carta
+		local e1=Effect.CreateEffect(c)
+		e1:SetType(EFFECT_TYPE_FIELD)
+		e1:SetCode(10) -- 10 é EFFECT_DRAW_COUNT
+		e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+		e1:SetTargetRange(1,0)
+		e1:SetValue(0) -- Zera a compra automática do motor
+		e1:SetReset(0x1000) -- 0x1000 é RESET_PHASE + PHASE_DRAW
+		Duel.RegisterEffect(e1,tp)
+		
+		-- 3. Entrega as outras 4 cartas para completar 5
+		Duel.Draw(tp,4,1) -- 1 é REASON_RULE
+		
+		-- Auto-destruição para segurança
+		e:Reset()
 	end
 end
 
