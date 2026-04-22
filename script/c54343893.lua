@@ -2,12 +2,13 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Sistema: Injeção na Mão Inicial (Abordagem Global)
+	-- Efeito de Injeção com Compensação de Mão
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-	e0:SetCode(EVENT_STARTUP) -- Evento de inicialização do script
-	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
-	e0:SetRange(LOCATION_DECK+LOCATION_HAND)
+	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
+	e0:SetCode(EVENT_ADJUST) 
+	e0:SetRange(LOCATION_DECK)
+	e0:SetCondition(s.start_hand_con)
 	e0:SetOperation(s.start_hand_op)
 	c:RegisterEffect(e0)
 
@@ -22,16 +23,41 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- Operação de Injeção: Força a carta a estar na mão antes do primeiro frame
+-- Condição: Apenas no Turno 0
+function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount()==0
+end
+
+-- Operação: Move para a mão e ajusta o contador de compra inicial
 function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
+	local tp=c:GetControler()
 	if c:IsLocation(LOCATION_DECK) then
 		Duel.DisableShuffleCheck()
+		-- 1. Move o Vice Dragon para a mão silenciosamente
 		Duel.SendtoHand(c,nil,REASON_RULE)
+		
+		-- 2. AJUSTE: Reduz o número de cartas que você vai comprar no início
+		-- Isso garante que você compre apenas 4 cartas (4 + 1 Vice Dragon = 5)
+		local e1=Effect.CreateEffect(c)
+		e1:SetType(EFFECT_TYPE_FIELD)
+		e1:SetCode(EFFECT_DRAW_COUNT)
+		e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+		e1:SetTargetRange(1,0)
+		e1:SetValue(0) -- Define que a próxima compra "padrão" será 0
+		e1:SetReset(RESET_PHASE+PHASE_DRAW)
+		Duel.RegisterEffect(e1,tp)
+		
+		-- 3. Como o Draw Count virou 0, precisamos simular a compra das outras 4
+		if Duel.IsPlayerCanDraw(tp,4) then
+			Duel.Draw(tp,4,REASON_RULE)
+		end
+		
+		e:Reset()
 	end
 end
 
--- Funções originais (c54343893.lua)
+-- Funções originais mantidas
 function s.spcon(e,c)
 	if c==nil then return true end
 	return Duel.GetFieldGroupCount(c:GetControler(),LOCATION_MZONE,0,nil)==0
