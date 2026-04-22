@@ -2,11 +2,11 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Troca de Mão Inicial (Garante exatamente 5 cartas)
+	-- Efeito de Substituição Silenciosa na Mão Inicial
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_ADJUST) 
+	e0:SetCode(EVENT_TO_HAND) -- Deteta quando as cartas chegam à mão
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.start_hand_con)
 	e0:SetOperation(s.start_hand_op)
@@ -23,28 +23,26 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se o duelo começou e o jogador já tem as 5 cartas iniciais
+-- 1. Condição: Turno 0 e verifica se o jogador está a receber a mão inicial
 function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
-	local hand_count = Duel.GetFieldGroupCount(e:GetHandlerPlayer(),LOCATION_HAND,0)
-	return Duel.GetTurnCount()==0 and hand_count >= 5
+	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Troca uma carta aleatória da mão pelo Vice Dragon
+-- 2. Operação: Troca instantânea por uma carta da mão
 function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	if c:IsLocation(LOCATION_DECK) then
-		local g=Duel.GetFieldGroup(tp,LOCATION_HAND,0)
-		if #g>0 then
-			Duel.DisableShuffleCheck()
-			-- Seleciona uma carta aleatória da mão para "sacrificar"
-			local sg=g:RandomSelect(tp,1)
-			-- Devolve a carta para o deck e puxa o Vice Dragon para a mão
-			Duel.SendtoDeck(sg,nil,SEQ_DEEP,REASON_RULE)
-			Duel.SendtoHand(c,nil,REASON_RULE)
-			-- Limpa o efeito para não entrar em loop
-			e:Reset()
-		end
+	-- Espera as 5 cartas estarem na mão para agir
+	local g=Duel.GetFieldGroup(tp,LOCATION_HAND,0)
+	if #g>=5 and c:IsLocation(LOCATION_DECK) then
+		Duel.DisableShuffleCheck()
+		-- Escolhe uma carta aleatória que acabou de ser comprada
+		local sg=g:RandomSelect(tp,1)
+		-- Devolve-a para o fundo do deck e coloca o Vice Dragon na mão
+		Duel.SendtoDeck(sg,nil,SEQ_DEEP,REASON_RULE)
+		Duel.SendtoHand(c,nil,REASON_RULE)
+		-- Reseta o efeito para não interferir no resto do duelo
+		e:Reset()
 	end
 end
 
