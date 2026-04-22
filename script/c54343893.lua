@@ -2,14 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Substituição Silenciosa na Mão Inicial
+	-- Configuração Silenciosa: Move para o topo do Deck no Turno 0
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_TO_HAND) -- Deteta quando as cartas chegam à mão
+	e0:SetCode(EVENT_ADJUST) 
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.start_hand_con)
-	e0:SetOperation(s.start_hand_op)
+	e0:SetCondition(s.top_deck_con)
+	e0:SetOperation(s.top_deck_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,25 +23,19 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Turno 0 e verifica se o jogador está a receber a mão inicial
-function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
+-- 1. Condição: Apenas no início absoluto do duelo
+function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Troca instantânea por uma carta da mão
-function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Coloca a carta no topo (última sequência do Deck)
+function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	local tp=c:GetControler()
-	-- Espera as 5 cartas estarem na mão para agir
-	local g=Duel.GetFieldGroup(tp,LOCATION_HAND,0)
-	if #g>=5 and c:IsLocation(LOCATION_DECK) then
+	if c:IsLocation(LOCATION_DECK) then
 		Duel.DisableShuffleCheck()
-		-- Escolhe uma carta aleatória que acabou de ser comprada
-		local sg=g:RandomSelect(tp,1)
-		-- Devolve-a para o fundo do deck e coloca o Vice Dragon na mão
-		Duel.SendtoDeck(sg,nil,SEQ_DEEP,REASON_RULE)
-		Duel.SendtoHand(c,nil,REASON_RULE)
-		-- Reseta o efeito para não interferir no resto do duelo
+		-- No EDOPro, SEQ_TOP (ou a contagem total - 1) coloca a carta para ser a próxima a sair
+		Duel.MoveSequence(c, SEQ_TOP)
+		-- Remove o efeito para não interferir se o deck for embaralhado depois
 		e:Reset()
 	end
 end
