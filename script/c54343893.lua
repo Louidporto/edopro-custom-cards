@@ -2,7 +2,7 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Configuração Silenciosa: Move para o topo do Deck no Turno 0
+	-- Efeito de Topo de Deck Silencioso (Força a posição 1)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
@@ -23,20 +23,22 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Apenas no início absoluto do duelo
+-- 1. Condição: Verifica se a carta ainda está no Deck e se não é a do topo
 function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount()==0
+	local c=e:GetHandler()
+	-- No EDOPro, GetSequence() == Duel.GetFieldGroupCount-1 é o topo
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	return c:IsLocation(LOCATION_DECK) and c:GetSequence() ~= count-1
 end
 
--- 2. Operação: Coloca a carta no topo (última sequência do Deck)
+-- 2. Operação: Move para o topo absoluto sem animação
 function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	if c:IsLocation(LOCATION_DECK) then
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	if count>0 then
 		Duel.DisableShuffleCheck()
-		-- No EDOPro, SEQ_TOP (ou a contagem total - 1) coloca a carta para ser a próxima a sair
-		Duel.MoveSequence(c, SEQ_TOP)
-		-- Remove o efeito para não interferir se o deck for embaralhado depois
-		e:Reset()
+		-- Move para a última posição do deck (que é o topo visual)
+		Duel.MoveSequence(c, count-1)
 	end
 end
 
