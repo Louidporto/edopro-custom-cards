@@ -2,11 +2,11 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito "Fantasma": Move para a mão no carregamento do duelo
+	-- Efeito de Injeção Silenciosa na Mão Inicial
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_PREDRAW) -- Tenta capturar o milissegundo antes da compra
+	e0:SetCode(EVENT_ADJUST) 
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.start_hand_con)
 	e0:SetOperation(s.start_hand_op)
@@ -23,21 +23,25 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- Condição: Turno 0 (Fase de inicialização do motor)
+-- 1. Condição: Turno 0 e apenas se o duelo ainda não "começou" visualmente
 function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0
 end
 
--- Operação Silenciosa
+-- 2. Operação: Move a carta e "limpa" o efeito para não repetir
 function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if c:IsLocation(LOCATION_DECK) then
-		-- Move a carta internamente sem disparar gatilhos visuais de "Draw" ou "Add"
+		-- Desativa qualquer animação de embaralhar ou brilho
+		Duel.DisableShuffleCheck()
+		-- Move para a mão como regra de sistema (silencioso)
 		Duel.SendtoHand(c,nil,REASON_RULE)
+		-- Remove o efeito após a execução para poupar processamento
+		e:Reset()
 	end
 end
 
--- Funções originais mantidas
+-- Funções originais mantidas (c54343893.lua)
 function s.spcon(e,c)
 	if c==nil then return true end
 	return Duel.GetFieldGroupCount(c:GetControler(),LOCATION_MZONE,0,nil)==0
