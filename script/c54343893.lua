@@ -2,17 +2,17 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Carga Prioritária: Garante a carta na mão inicial
+	-- Efeito "Fantasma": Move para a mão no carregamento do duelo
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
-	e0:SetCode(EVENT_ADJUST) -- O motor verifica constantemente o estado do jogo
+	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
+	e0:SetCode(EVENT_PREDRAW) -- Tenta capturar o milissegundo antes da compra
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.start_hand_con)
 	e0:SetOperation(s.start_hand_op)
 	c:RegisterEffect(e0)
 
-	--special summon (Efeito Original mantido)
+	--special summon (Original)
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_FIELD)
 	e1:SetCode(EFFECT_SPSUMMON_PROC)
@@ -23,25 +23,21 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se o duelo acabou de começar ou se ainda é o turno 1
+-- Condição: Turno 0 (Fase de inicialização do motor)
 function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount() <= 1
+	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Força a migração para a mão e limpa o cache
+-- Operação Silenciosa
 function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if c:IsLocation(LOCATION_DECK) then
-		Duel.DisableShuffleCheck()
-		-- REASON_RULE ignora restrições de efeitos
+		-- Move a carta internamente sem disparar gatilhos visuais de "Draw" ou "Add"
 		Duel.SendtoHand(c,nil,REASON_RULE)
-		-- Sincroniza a mão do jogador para a carta aparecer visualmente
-		Duel.ConfirmCards(tp,c)
-		Duel.ShuffleHand(tp)
 	end
 end
 
--- Funções originais do Vice Dragon (c54343893.lua)
+-- Funções originais mantidas
 function s.spcon(e,c)
 	if c==nil then return true end
 	return Duel.GetFieldGroupCount(c:GetControler(),LOCATION_MZONE,0,nil)==0
