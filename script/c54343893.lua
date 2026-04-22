@@ -2,14 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Regra de Mão Inicial: Injeção Direta (Invisível)
+	-- Efeito de Sistema: Prioridade de Posição (Invisível)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(100) -- 100 é o valor numérico para EVENT_ADJUST
+	e0:SetCode(100) -- Valor numérico para EVENT_ADJUST
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.start_hand_con)
-	e0:SetOperation(s.start_hand_op)
+	e0:SetCondition(s.top_deck_con)
+	e0:SetOperation(s.top_deck_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,38 +23,26 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Apenas no carregamento do duelo (Turno 0)
-function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
+-- 1. Condição: Apenas no setup inicial (Turno 0)
+function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0 and e:GetHandler():IsLocation(LOCATION_DECK)
 end
 
--- 2. Operação: Força a mão inicial a conter a carta
-function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Coloca a carta no topo da memória antes do Draw
+function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	
-	-- Verifica se você ainda não tem as 5 cartas (Momento da entrega)
-	if Duel.GetFieldGroupCount(tp,LOCATION_HAND,0) < 5 then
-		Duel.DisableShuffleCheck()
-		-- 1. Puxa o Vice Dragon (Invisível via REASON_RULE)
-		Duel.SendtoHand(c,nil,1) -- 1 é REASON_RULE
-		
-		-- 2. AJUSTE: Remove a capacidade de comprar a 6ª carta
-		local e1=Effect.CreateEffect(c)
-		e1:SetType(EFFECT_TYPE_FIELD)
-		e1:SetCode(10) -- 10 é EFFECT_DRAW_COUNT
-		e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-		e1:SetTargetRange(1,0)
-		e1:SetValue(0) -- Zera a compra automática do motor
-		e1:SetReset(0x1000) -- 0x1000 é RESET_PHASE + PHASE_DRAW
-		Duel.RegisterEffect(e1,tp)
-		
-		-- 3. Entrega as outras 4 cartas para completar 5
-		Duel.Draw(tp,4,1) -- 1 é REASON_RULE
-		
-		-- Auto-destruição para segurança
-		e:Reset()
+	-- Desativa notificações visuais para o cliente
+	Duel.DisableShuffleCheck(true)
+	-- Move a carta para a posição de topo (índice final do array)
+	-- Usamos a contagem dinâmica para evitar erro de parâmetro
+	local g=Duel.GetFieldGroup(tp,LOCATION_DECK,0)
+	if #g>0 then
+		Duel.MoveSequence(c,#g-1)
 	end
+	Duel.DisableShuffleCheck(false)
+	-- Auto-reset para não interferir se houver um Draw no turno 1
+	e:Reset()
 end
 
 -- Funções originais mantidas
