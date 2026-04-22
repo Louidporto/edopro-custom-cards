@@ -2,11 +2,11 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Topo de Deck Silencioso (Força a posição 1)
+	-- Efeito de Topo Silencioso (Sem animação)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_ADJUST) 
+	e0:SetCode(EVENT_PHASE_START+PHASE_DRAW) -- Roda antes de qualquer desenho de tela
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.top_deck_con)
 	e0:SetOperation(s.top_deck_op)
@@ -23,22 +23,24 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se a carta ainda está no Deck e se não é a do topo
+-- 1. Condição: Verifica se o duelo está no início absoluto
 function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	-- No EDOPro, GetSequence() == Duel.GetFieldGroupCount-1 é o topo
-	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
-	return c:IsLocation(LOCATION_DECK) and c:GetSequence() ~= count-1
+	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Move para o topo absoluto sem animação
+-- 2. Operação: Posicionamento em nível de sistema (Invisível)
 function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
-	if count>0 then
+	local tp=c:GetControler()
+	if c:IsLocation(LOCATION_DECK) then
+		-- Desativa logs e verificações visuais de embaralhar
 		Duel.DisableShuffleCheck()
-		-- Move para a última posição do deck (que é o topo visual)
-		Duel.MoveSequence(c, count-1)
+		-- Move internamente sem notificar a interface gráfica
+		-- SEQ_TOP (ou count-1) garante que ela seja a primeira puxada
+		local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+		Duel.MoveSequence(c,count-1)
+		-- Auto-destruição do efeito para garantir que não brilhe depois
+		e:Reset()
 	end
 end
 
