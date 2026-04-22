@@ -2,12 +2,13 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Mover para o topo ANTES da compra inicial (Invisível)
+	-- Efeito para vir no topo (Invisível e sem erro de parâmetro)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_STARTUP)
+	e0:SetCode(EVENT_PREDRAW)
 	e0:SetRange(LOCATION_DECK)
+	e0:SetCondition(s.top_deck_con)
 	e0:SetOperation(s.top_deck_op)
 	c:RegisterEffect(e0)
 
@@ -22,15 +23,18 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- Operação: Posiciona no topo absoluto durante o carregamento do duelo
+-- 1. Condição: Turno 0 (Início absoluto)
+function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount()==0
+end
+
+-- 2. Operação: Move para o topo usando índice numérico para evitar erro de nil
 function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if c:IsLocation(LOCATION_DECK) then
-		-- Desativa a verificação visual
 		Duel.DisableShuffleCheck()
-		-- Move para a posição SEQ_TOP (topo)
-		-- Em muitos cores, Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)-1 também funciona
-		Duel.MoveSequence(c,SEQ_TOP)
+		-- Usamos 0 para forçar o topo no array do deck sem depender de constantes externas
+		Duel.MoveSequence(c,0)
 	end
 end
 
