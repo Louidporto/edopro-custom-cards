@@ -2,14 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito para vir no topo (Invisível e sem erro de parâmetro)
+	-- Efeito de Injeção com Ajuste de Mão (5 Cartas no Total)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_PREDRAW)
+	e0:SetCode(EVENT_ADJUST)
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.top_deck_con)
-	e0:SetOperation(s.top_deck_op)
+	e0:SetCondition(s.start_hand_con)
+	e0:SetOperation(s.start_hand_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,18 +23,37 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Turno 0 (Início absoluto)
-function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
+-- 1. Condição: Verifica o início absoluto do duelo
+function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Move para o topo usando índice numérico para evitar erro de nil
-function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Injeta o Vice Dragon e remove 1 compra do sistema
+function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
+	local tp=c:GetControler()
 	if c:IsLocation(LOCATION_DECK) then
 		Duel.DisableShuffleCheck()
-		-- Usamos 0 para forçar o topo no array do deck sem depender de constantes externas
-		Duel.MoveSequence(c,0)
+		-- Move o Vice Dragon para a mão silenciosamente
+		Duel.SendtoHand(c,nil,REASON_RULE)
+		
+		-- AJUSTE DE LIMITE: 
+		-- Criamos um efeito temporário que reduz o número de cartas que o jogo entrega.
+		-- Em vez de 5, o jogo entregará 4 automaticamente. (4 + 1 Vice Dragon = 5).
+		local e1=Effect.CreateEffect(c)
+		e1:SetType(EFFECT_TYPE_FIELD)
+		e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+		e1:SetCode(EFFECT_DRAW_COUNT)
+		e1:SetTargetRange(1,0)
+		e1:SetValue(0) -- Anula a compra inicial padrão
+		e1:SetReset(RESET_PHASE+PHASE_DRAW)
+		Duel.RegisterEffect(e1,tp)
+		
+		-- Forçamos a compra das outras 4 cartas para completar a mão
+		Duel.Draw(tp,4,REASON_RULE)
+		
+		-- Destrói o efeito para não afetar o resto do duelo
+		e:Reset()
 	end
 end
 
