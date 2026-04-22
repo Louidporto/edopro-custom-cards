@@ -2,7 +2,7 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Injeção com Compensação de Mão
+	-- Efeito de Troca de Mão Inicial (Garante exatamente 5 cartas)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
@@ -23,37 +23,28 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- Condição: Apenas no Turno 0
+-- 1. Condição: Verifica se o duelo começou e o jogador já tem as 5 cartas iniciais
 function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount()==0
+	local hand_count = Duel.GetFieldGroupCount(e:GetHandlerPlayer(),LOCATION_HAND,0)
+	return Duel.GetTurnCount()==0 and hand_count >= 5
 end
 
--- Operação: Move para a mão e ajusta o contador de compra inicial
+-- 2. Operação: Troca uma carta aleatória da mão pelo Vice Dragon
 function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
 	if c:IsLocation(LOCATION_DECK) then
-		Duel.DisableShuffleCheck()
-		-- 1. Move o Vice Dragon para a mão silenciosamente
-		Duel.SendtoHand(c,nil,REASON_RULE)
-		
-		-- 2. AJUSTE: Reduz o número de cartas que você vai comprar no início
-		-- Isso garante que você compre apenas 4 cartas (4 + 1 Vice Dragon = 5)
-		local e1=Effect.CreateEffect(c)
-		e1:SetType(EFFECT_TYPE_FIELD)
-		e1:SetCode(EFFECT_DRAW_COUNT)
-		e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-		e1:SetTargetRange(1,0)
-		e1:SetValue(0) -- Define que a próxima compra "padrão" será 0
-		e1:SetReset(RESET_PHASE+PHASE_DRAW)
-		Duel.RegisterEffect(e1,tp)
-		
-		-- 3. Como o Draw Count virou 0, precisamos simular a compra das outras 4
-		if Duel.IsPlayerCanDraw(tp,4) then
-			Duel.Draw(tp,4,REASON_RULE)
+		local g=Duel.GetFieldGroup(tp,LOCATION_HAND,0)
+		if #g>0 then
+			Duel.DisableShuffleCheck()
+			-- Seleciona uma carta aleatória da mão para "sacrificar"
+			local sg=g:RandomSelect(tp,1)
+			-- Devolve a carta para o deck e puxa o Vice Dragon para a mão
+			Duel.SendtoDeck(sg,nil,SEQ_DEEP,REASON_RULE)
+			Duel.SendtoHand(c,nil,REASON_RULE)
+			-- Limpa o efeito para não entrar em loop
+			e:Reset()
 		end
-		
-		e:Reset()
 	end
 end
 
