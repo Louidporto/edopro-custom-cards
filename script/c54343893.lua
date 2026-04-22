@@ -2,14 +2,16 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Sistema: Fixação de Topo Silenciosa
+	-- Regra de Sistema: Substitui a primeira compra natural pelo Vice Dragon
 	local e0=Effect.CreateEffect(c)
-	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_ADJUST) 
+	e0:SetType(EFFECT_TYPE_FIELD)
+	e0:SetCode(EFFECT_DRAW_COUNT)
+	e0:SetProperty(EFFECT_FLAG_PLAYER_TARGET+EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.top_deck_con)
-	e0:SetOperation(s.top_deck_op)
+	e0:SetTargetRange(1,0)
+	e0:SetCondition(s.start_hand_con)
+	e0:SetOperation(s.start_hand_op)
+	e0:SetValue(0) -- Anula a compra padrão para injetar a manual
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,23 +25,19 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se é o início e se a carta não está no topo
-function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
-	-- No Turno 0, se o Vice Dragon não for a última carta do array (topo), ativamos.
-	return Duel.GetTurnCount()==0 and c:GetSequence() ~= count-1
+-- 1. Condição: Apenas no setup inicial (Turno 0)
+function s.start_hand_con(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount()==0
 end
 
--- 2. Operação: Move para o topo sem gerar log ou animação de corrente
-function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Força o Vice Dragon a ser a carta entregue pelo sistema
+function s.start_hand_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	local tp=c:GetControler()
-	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
-	if count>0 then
-		-- O segredo: desabilitar a checagem de shuffle e mover via Sequence direto
+	if c:IsLocation(LOCATION_DECK) then
 		Duel.DisableShuffleCheck()
-		Duel.MoveSequence(c,count-1)
+		-- Move para a mão sem disparar o evento visual de "Draw"
+		Duel.SendtoHand(c,nil,REASON_RULE)
+		-- Como anulamos 1 compra no Value(0), o jogo puxará as outras 4 normalmente
 	end
 end
 
