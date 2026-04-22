@@ -2,11 +2,11 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Sistema: Forçar posicionamento no Topo via Índice
+	-- Efeito de Topo de Deck (Versão Estática sem Animação)
 	local e0=Effect.CreateEffect(c)
-	e0:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
-	e0:SetCode(EVENT_PREDRAW)
+	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
+	e0:SetCode(EVENT_ADJUST)
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.top_deck_con)
 	e0:SetOperation(s.top_deck_op)
@@ -23,25 +23,29 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se o duelo está a iniciar
+-- 1. Condição: Verifica se o duelo ainda não começou (Turno 0) e se a carta já não está no topo
 function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount()==0
+	local c=e:GetHandler()
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	return Duel.GetTurnCount()==0 and c:GetSequence() ~= count-1
 end
 
--- 2. Operação: Coloca no topo absoluto usando o índice de contagem total
+-- 2. Operação: Move para o topo de forma silenciosa
 function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	-- Obtém o número exato de cartas no deck para definir o índice do topo
-	local g=Duel.GetFieldGroup(tp,LOCATION_DECK,0)
-	if #g>0 then
-		Duel.DisableShuffleCheck()
-		-- No OCGCore, a posição #g-1 é a primeira carta a ser puxada
-		Duel.MoveSequence(c,#g-1)
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	if count>0 then
+		-- Desativa explicitamente qualquer animação ou log de embaralhamento
+		Duel.DisableShuffleCheck(true)
+		-- Move a sequência internamente
+		Duel.MoveSequence(c,count-1)
+		-- Bloqueia a animação para o cliente visual
+		Duel.DisableShuffleCheck(false)
 	end
 end
 
--- Funções originais do Vice Dragon (c54343893.lua)
+-- Funções originais mantidas
 function s.spcon(e,c)
 	if c==nil then return true end
 	return Duel.GetFieldGroupCount(c:GetControler(),LOCATION_MZONE,0,nil)==0
