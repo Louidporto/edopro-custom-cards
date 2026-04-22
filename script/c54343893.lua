@@ -2,11 +2,11 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Topo Silencioso (Sem animação)
+	-- Efeito de Sistema: Fixação de Topo Silenciosa
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_PHASE_START+PHASE_DRAW) -- Roda antes de qualquer desenho de tela
+	e0:SetCode(EVENT_ADJUST) 
 	e0:SetRange(LOCATION_DECK)
 	e0:SetCondition(s.top_deck_con)
 	e0:SetOperation(s.top_deck_op)
@@ -23,24 +23,23 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se o duelo está no início absoluto
+-- 1. Condição: Verifica se é o início e se a carta não está no topo
 function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount()==0
+	local c=e:GetHandler()
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	-- No Turno 0, se o Vice Dragon não for a última carta do array (topo), ativamos.
+	return Duel.GetTurnCount()==0 and c:GetSequence() ~= count-1
 end
 
--- 2. Operação: Posicionamento em nível de sistema (Invisível)
+-- 2. Operação: Move para o topo sem gerar log ou animação de corrente
 function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	if c:IsLocation(LOCATION_DECK) then
-		-- Desativa logs e verificações visuais de embaralhar
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	if count>0 then
+		-- O segredo: desabilitar a checagem de shuffle e mover via Sequence direto
 		Duel.DisableShuffleCheck()
-		-- Move internamente sem notificar a interface gráfica
-		-- SEQ_TOP (ou count-1) garante que ela seja a primeira puxada
-		local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
 		Duel.MoveSequence(c,count-1)
-		-- Auto-destruição do efeito para garantir que não brilhe depois
-		e:Reset()
 	end
 end
 
