@@ -2,14 +2,14 @@
 --Vice Dragon
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Efeito de Substituição Instantânea (Garante mão de 5 cartas)
+	-- Fixação de Topo Primitiva (Invisível e sem erro de parâmetro)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE+EFFECT_FLAG_IGNORE_IMMUNE)
-	e0:SetCode(EVENT_TO_HAND)
+	e0:SetCode(EVENT_ADJUST)
 	e0:SetRange(LOCATION_DECK)
-	e0:SetCondition(s.hand_con)
-	e0:SetOperation(s.hand_op)
+	e0:SetCondition(s.top_deck_con)
+	e0:SetOperation(s.top_deck_op)
 	c:RegisterEffect(e0)
 
 	--special summon (Original)
@@ -23,28 +23,24 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 end
 
--- 1. Condição: Verifica se o duelo está no Turno 0 e se o jogador recebeu a mão inicial
-function s.hand_con(e,tp,eg,ep,ev,re,r,rp)
-	local hand_count = Duel.GetFieldGroupCount(e:GetHandlerPlayer(),LOCATION_HAND,0)
-	return Duel.GetTurnCount()==0 and hand_count >= 5
+-- 1. Condição: Apenas no Turno 0 e se a carta ainda estiver no deck
+function s.top_deck_con(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount()==0 and e:GetHandler():IsLocation(LOCATION_DECK)
 end
 
--- 2. Operação: Troca silenciosa para manter o equilíbrio de 5 cartas
-function s.hand_op(e,tp,eg,ep,ev,re,r,rp)
+-- 2. Operação: Move para o topo absoluto usando o índice de memória (Invisível)
+function s.top_deck_op(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tp=c:GetControler()
-	if c:IsLocation(LOCATION_DECK) then
-		local g=Duel.GetFieldGroup(tp,LOCATION_HAND,0)
-		if #g>0 then
-			Duel.DisableShuffleCheck()
-			-- Seleciona uma carta aleatória da mão para remover
-			local sg=g:RandomSelect(tp,1)
-			-- Devolve a carta ao deck e puxa o Vice Dragon como regra (sem animação)
-			Duel.SendtoDeck(sg,nil,2,REASON_RULE)
-			Duel.SendtoHand(c,nil,REASON_RULE)
-			-- Reseta o efeito para evitar repetições no duelo
-			e:Reset()
-		end
+	-- Obtemos o número de cartas para saber onde é o topo (índice total - 1)
+	local g=Duel.GetFieldGroup(tp,LOCATION_DECK,0)
+	local count=#g
+	if count>0 then
+		-- Desativa logs e animações visuais
+		Duel.DisableShuffleCheck()
+		-- Move a sequência para a última posição do array (Topo)
+		-- Usamos o número direto para evitar o erro de 'nil' que vimos antes
+		Duel.MoveSequence(c,count-1)
 	end
 end
 
