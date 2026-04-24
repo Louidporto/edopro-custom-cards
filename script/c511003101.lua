@@ -26,7 +26,7 @@ function s.final_chance_op(e,tp,eg,ep,ev,re,r,rp)
 		local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
 		if count>0 then
 			-- Move para a última posição do array (o topo de onde o motor puxa)
-			Duel.MoveSequence(c,count-1)
+			Duel.MoveSequence(c,0)
 		end
 	end
 end
