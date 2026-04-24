@@ -1,40 +1,31 @@
-
 local s,id=GetID()
-
 function s.initial_effect(c)
-    -- 1. Forçar a carta a ficar sempre no fundo do Deck
-    local e1=Effect.CreateEffect(c)
-    e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-    e1:SetCode(EVENT_ADJUST) -- Checa constantemente o estado do jogo
-    e1:SetRange(LOCATION_DECK)
-    e1:SetOperation(s.stay_bottom_op)
-    c:RegisterEffect(e1)
-
-    -- 2. Substituição: Se chegar na mão, sai e puxa outra
-    local e2=Effect.CreateEffect(c)
-    e2:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
-    e2:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
-    e2:SetCode(EVENT_TO_HAND)
-    e2:SetOperation(s.replace_op)
-    c:RegisterEffect(e2)
+	-- Aumentar probabilidade (Fixação em Slot de Mão Inicial)
+	local e0=Effect.CreateEffect(c)
+	e0:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
+	e0:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
+	e0:SetCode(EVENT_ADJUST)
+	e0:SetRange(LOCATION_DECK)
+	e0:SetCondition(s.luck_con)
+	e0:SetOperation(s.luck_op)
+	c:RegisterEffect(e0)
 end
 
-function s.stay_bottom_op(e,tp,eg,ep,ev,re,r,rp)
-    local c=e:GetHandler()
-    local g=Duel.GetDecktopGroup(tp,1)
-    -- Se ela estiver no topo (seria a próxima a ser puxada), joga pra baixo
-    if g:IsContains(c) then
-        Duel.MoveSequence(c,1)
-    end
+function s.luck_con(e,tp,eg,ep,ev,re,r,rp)
+	-- Verifica se ainda estamos no Turno 0
+	return Duel.GetTurnCount()==0 and e:GetHandler():IsLocation(LOCATION_DECK)
 end
 
-function s.replace_op(e,tp,eg,ep,ev,re,r,rp)
-    local c=e:GetHandler()
-    if c:IsLocation(LOCATION_HAND) then
-        Duel.DisableShuffleCheck()
-        -- Remove do jogo de forma "invisível"
-        Duel.Remove(c,POS_FACEUP,REASON_RULE)
-        -- Faz o jogador comprar a carta que agora está no topo
-        Duel.Draw(tp,1,REASON_RULE)
-    end
+function s.luck_op(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	local tp=c:GetControler()
+	local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
+	
+	-- Se a carta estiver enterrada no deck (longe das 5 primeiras do topo)
+	if c:GetSequence() < (count-5) then
+		Duel.DisableShuffleCheck()
+		-- Sorteia um número entre as 5 posições do topo (count-1 até count-5)
+		local random_pos = math.random(count-5, count-1)
+		Duel.MoveSequence(c, random_pos)
+	end
 end
