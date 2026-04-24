@@ -85,7 +85,7 @@ end
 		local count=Duel.GetFieldGroupCount(tp,LOCATION_DECK,0)
 		if count>0 then
 			-- Move para a última posição do array (o topo de onde o motor puxa)
-			Duel.MoveSequence(c,0)
+			Duel.MoveSequence(c,40)
 		end
 	end
 end
